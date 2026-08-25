@@ -85,3 +85,31 @@ def test_board_graph_get_tiles_for_vertex():
     assert len(tiles) == 3
     resources = {t.resource for t in tiles}
     assert resources == {"ore", "brick", "lumber"}
+
+def test_board_graph_get_pips_for_vertex_ignores_desert_and_numberless_tiles():
+    board_model = Board(
+        tiles=[
+            Tile(q=0, r=0, resource="ore", number=10),
+            Tile(q=1, r=0, resource="desert", number=None),
+        ],
+        ports=[],
+        robber=Coordinate(q=2, r=0),
+    )
+    graph = BoardGraph(board_model)
+    vertex = canonical_vertex((0, 0), (1, 0), (1, -1))
+
+    assert graph.get_pips_for_vertex(vertex) == 3
+
+def test_available_settlements_obey_distance_rule():
+    board_model = Board(
+        tiles=[Tile(q=0, r=0, resource="ore", number=10)],
+        ports=[],
+        robber=Coordinate(q=2, r=0),
+    )
+    graph = BoardGraph(board_model)
+    occupied = {get_hex_vertices((0, 0))[0]}
+
+    available = graph.get_available_settlements(occupied)
+
+    assert get_hex_vertices((0, 0))[0] not in available
+    assert len(available) == 3

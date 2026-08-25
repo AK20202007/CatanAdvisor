@@ -9,13 +9,17 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python 3.12
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ matrix.python-version }}
         
     - name: Install dependencies
       run: |
@@ -24,11 +28,21 @@ jobs:
         
     - name: Lint with flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
+        # Fail on syntax errors, undefined names, and other fatal lint findings.
         flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        # Keep the existing style report visible while the codebase is cleaned up incrementally.
         flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
         
+    - name: Compile Python modules
+      run: |
+        python -m compileall -q src tests
+
     - name: Test with pytest
       run: |
-        PYTHONPATH=. pytest tests/ -v
+        PYTHONPATH=. python -m pytest tests/ -v
+
+    - name: CLI smoke test
+      run: |
+        PYTHONPATH=. python -m src.cli sample_state.json > /tmp/catan-advisor-cli.log
+        grep -q '"recommendedBuild"' /tmp/catan-advisor-cli.log
+        grep -q '"recommendedTrades"' /tmp/catan-advisor-cli.log

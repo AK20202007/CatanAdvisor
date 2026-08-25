@@ -29,7 +29,7 @@ def trade_state():
             Player(
                 id="P2",
                 victoryPoints=2,
-                resources=Resources(brick=0, lumber=0, wool=0, grain=0, ore=0),
+                resources=Resources(brick=1, lumber=0, wool=0, grain=0, ore=0),
                 devCards=DevCards(unrevealed=UnrevealedDevCards(count=0)),
                 settlements=[Settlement(vertex="0,0|1,0|0,1")],
                 cities=[],
@@ -60,7 +60,8 @@ def test_evaluate_player_trades(trade_state):
     
     player = trade_state.players[0]
     
-    # P1 wants brick. P2 has a settlement on brick (1,0 -> 8 -> 5 pips).
+    # P1 wants brick. P2 has one brick in hand and a settlement on brick
+    # (1,0 -> 8 -> 5 pips).
     # Expected income for P2 for brick is 5, which > 2.0.
     # P1 has lumber (4) and grain (1) surplus.
     
@@ -82,6 +83,44 @@ def test_get_recommended_trades(trade_state):
     
     trades = engine.get_recommended_trades("P1", best_build)
     
-    # The default mock needs 'ore'. P1 has 4 lumber, so bank trade is possible.
+    # A settlement needs brick, lumber, wool, and grain. P1 is missing brick
+    # and wool; the engine should derive that instead of hard-coding ore.
     assert len(trades) > 0
-    assert trades[0].receive == {"ore": 1}
+    assert trades[0].receive == {"brick": 1}
+
+def test_bank_trade_caps_output_to_requested_amount(trade_state):
+    board = BoardGraph(trade_state.board)
+    prod = ProductionEngine(trade_state, board)
+    engine = TradeEngine(trade_state, board, prod)
+    player = trade_state.players[0]
+    player.resources.lumber = 12
+
+    offers = engine.evaluate_bank_trades(player, needed="ore", amount_needed=2)
+
+    assert offers[0].give == {"lumber": 8}
+    assert offers[0].receive == {"ore": 2}
+
+def test_player_trade_requires_opponent_to_have_resource(trade_state):
+    board = BoardGraph(trade_state.board)
+    prod = ProductionEngine(trade_state, board)
+    engine = TradeEngine(trade_state, board, prod)
+    player = trade_state.players[0]
+    trade_state.players[1].resources.brick = 0
+
+    assert engine.evaluate_player_trades(player, needed="brick") == []
+
+def test_city_recommendations_use_city_cost(trade_state):
+    board = BoardGraph(trade_state.board)
+    prod = ProductionEngine(trade_state, board)
+    engine = TradeEngine(trade_state, board, prod)
+    player = trade_state.players[0]
+    player.resources.lumber = 12
+    player.resources.grain = 2
+
+    trades = engine.get_recommended_trades(
+        player.id,
+        BuildOption(type="city", location="0,0|1,0|0,1", score=10.0),
+    )
+
+    assert trades[0].receive == {"ore": 3}
+    assert trades[0].give == {"lumber": 12}

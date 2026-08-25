@@ -1,8 +1,9 @@
-from typing import List, Literal, Dict, Optional, Any, Union
+from typing import List, Literal, Optional, Any
 from pydantic import BaseModel, Field
 
 # Common Types
 ResourceType = Literal["brick", "lumber", "wool", "grain", "ore", "desert"]
+PRODUCIBLE_RESOURCES = ("brick", "lumber", "wool", "grain", "ore")
 DevCardType = Literal["knight", "road_building", "year_of_plenty", "monopoly", "victory_point"]
 PortType = Literal["3:1_generic", "2:1_brick", "2:1_lumber", "2:1_wool", "2:1_grain", "2:1_ore"]
 

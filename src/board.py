@@ -1,9 +1,17 @@
 from typing import List, Tuple, Dict, Set
-from .models import Board as BoardModel, Tile, GameState
+from .models import Board as BoardModel, Tile
 
 HexCoord = Tuple[int, int]
 VertexCoord = Tuple[HexCoord, HexCoord, HexCoord]
 EdgeCoord = Tuple[HexCoord, HexCoord]
+
+PIP_PROBABILITIES = {
+    2: 1, 12: 1,
+    3: 2, 11: 2,
+    4: 3, 10: 3,
+    5: 4, 9: 4,
+    6: 5, 8: 5,
+}
 
 # Axial coordinate directions for a pointy-topped or flat-topped hex grid.
 # Assuming standard axial directions.
@@ -70,5 +78,26 @@ class BoardGraph:
 
     def get_pips_for_vertex(self, vertex: VertexCoord) -> int:
         """Returns the total pip value of tiles adjacent to this vertex."""
-        # This will be used by the production engine
-        pass
+        return sum(
+            PIP_PROBABILITIES.get(tile.number, 0)
+            for tile in self.get_tiles_for_vertex(vertex)
+            if tile.resource != "desert"
+            and tile.number is not None
+            and (tile.q, tile.r) != self.robber_pos
+        )
+
+    def get_available_settlements(self, occupied: Set[VertexCoord] | None = None) -> List[VertexCoord]:
+        """Return vertices that satisfy Catan's distance rule.
+
+        Road connectivity is left to the caller because setup turns and normal
+        turns use different connectivity rules.
+        """
+        occupied = occupied or set()
+        available = []
+        for vertex in sorted(self.vertices):
+            if vertex in occupied:
+                continue
+            if any(len(set(vertex).intersection(other)) >= 2 for other in occupied):
+                continue
+            available.append(vertex)
+        return available

@@ -1,5 +1,5 @@
 import pytest
-from src.models import GameState, Board, Tile, Coordinate, Player, Resources, DevCards, UnrevealedDevCards
+from src.models import GameState, Board, Tile, Coordinate, Player, Resources, DevCards, UnrevealedDevCards, Settlement
 from src.board import BoardGraph
 from src.production_engine import ProductionEngine
 from src.build_engine import BuildEngine
@@ -57,3 +57,25 @@ def test_get_best_builds(base_state):
     assert options[0].score == 13.0
     assert options[1].location == "0,0|1,0|-1,0"
     assert options[1].score == 8.0
+
+def test_build_costs_and_affordable_builds(base_state):
+    board = BoardGraph(base_state.board)
+    prod = ProductionEngine(base_state, board)
+    engine = BuildEngine(base_state, board, prod)
+    player = base_state.players[0]
+
+    assert engine.can_afford(player, "settlement") is False
+    assert engine.get_missing_resources(player, {"ore": 3, "grain": 2}) == {"ore": 3, "grain": 2}
+    assert engine.get_affordable_builds("P1") == []
+
+def test_affordable_city_ranks_above_road(base_state):
+    board = BoardGraph(base_state.board)
+    prod = ProductionEngine(base_state, board)
+    engine = BuildEngine(base_state, board, prod)
+    player = base_state.players[0]
+    player.resources = Resources(brick=1, lumber=1, grain=2, ore=3)
+    player.settlements = [Settlement(vertex="0,0|1,0|0,1")]
+
+    options = engine.get_affordable_builds("P1")
+
+    assert [option.type for option in options] == ["city", "road"]

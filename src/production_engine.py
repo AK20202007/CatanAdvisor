@@ -1,14 +1,6 @@
 from typing import Dict
-from .models import GameState, ResourceType
-from .board import BoardGraph, VertexCoord
-
-PIP_PROBABILITIES = {
-    2: 1, 12: 1,
-    3: 2, 11: 2,
-    4: 3, 10: 3,
-    5: 4, 9: 4,
-    6: 5, 8: 5
-}
+from .models import GameState, ResourceType, PRODUCIBLE_RESOURCES
+from .board import BoardGraph, VertexCoord, PIP_PROBABILITIES
 
 def parse_vertex(vertex_str: str) -> VertexCoord:
     """
@@ -16,10 +8,21 @@ def parse_vertex(vertex_str: str) -> VertexCoord:
     Expected format: "q1,r1|q2,r2|q3,r3"
     """
     parts = vertex_str.split('|')
+    if len(parts) != 3:
+        raise ValueError(f"A vertex must contain exactly 3 hex coordinates: {vertex_str!r}")
+
     coords = []
-    for p in parts:
-        q, r = p.split(',')
-        coords.append((int(q), int(r)))
+    for part in parts:
+        values = part.split(',')
+        if len(values) != 2:
+            raise ValueError(f"Invalid hex coordinate in vertex: {part!r}")
+        try:
+            coords.append((int(values[0]), int(values[1])))
+        except ValueError as exc:
+            raise ValueError(f"Invalid integer coordinate in vertex: {part!r}") from exc
+
+    if len(set(coords)) != 3:
+        raise ValueError(f"A vertex cannot repeat a hex coordinate: {vertex_str!r}")
     return tuple(sorted(coords))
 
 class ProductionEngine:
@@ -33,27 +36,19 @@ class ProductionEngine:
         """
         income = {}
         for player in self.state.players:
-            player_income = {res: 0.0 for res in ["brick", "lumber", "wool", "grain", "ore"]}
+            player_income = {res: 0.0 for res in PRODUCIBLE_RESOURCES}
             
             # Settlements count as 1x
             for settlement in player.settlements:
                 vertex = parse_vertex(settlement.vertex)
-                tiles = self.board.get_tiles_for_vertex(vertex)
-                for tile in tiles:
-                    if tile.number and tile.resource != "desert":
-                        if (tile.q, tile.r) != self.board.robber_pos:
-                            pips = PIP_PROBABILITIES.get(tile.number, 0)
-                            player_income[tile.resource] += pips
+                for resource, pips in self.get_vertex_pips(vertex).items():
+                    player_income[resource] += pips
                             
             # Cities count as 2x
             for city in player.cities:
                 vertex = parse_vertex(city.vertex)
-                tiles = self.board.get_tiles_for_vertex(vertex)
-                for tile in tiles:
-                    if tile.number and tile.resource != "desert":
-                        if (tile.q, tile.r) != self.board.robber_pos:
-                            pips = PIP_PROBABILITIES.get(tile.number, 0)
-                            player_income[tile.resource] += (pips * 2)
+                for resource, pips in self.get_vertex_pips(vertex).items():
+                    player_income[resource] += pips * 2
                             
             income[player.id] = player_income
             
@@ -64,11 +59,12 @@ class ProductionEngine:
         Returns the expected pip yield per resource type if a settlement were built here.
         Useful for the Build Evaluation Engine.
         """
-        yields = {res: 0 for res in ["brick", "lumber", "wool", "grain", "ore"]}
+        yields = {res: 0 for res in PRODUCIBLE_RESOURCES}
         tiles = self.board.get_tiles_for_vertex(vertex)
         for tile in tiles:
-            if tile.number and tile.resource != "desert":
-                if (tile.q, tile.r) != self.board.robber_pos:
-                    pips = PIP_PROBABILITIES.get(tile.number, 0)
-                    yields[tile.resource] += pips
+            if tile.resource == "desert" or tile.number is None:
+                continue
+            if (tile.q, tile.r) == self.board.robber_pos:
+                continue
+            yields[tile.resource] += PIP_PROBABILITIES.get(tile.number, 0)
         return yields

@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import ValidationError
 from .models import GameState
 from .board import BoardGraph
-from .production_engine import ProductionEngine
+from .production_engine import ProductionEngine, parse_vertex
 from .build_engine import BuildEngine
 from .trade_engine import TradeEngine
 
@@ -40,9 +40,17 @@ def main():
     build_engine = BuildEngine(state, board_graph, production_engine)
     trade_engine = TradeEngine(state, board_graph, production_engine)
     
-    # 2. Find best build
-    # In a full game, we would generate all legal placements. Here we simulate a few choices.
-    possible_settlements = ["0,0|1,0|0,1", "1,0|2,0|1,1", "-1,0|0,-1|0,0"]
+    # 2. Find best builds from board-derived, non-adjacent vertices instead of
+    # relying on a fixed list that may not exist on the current board.
+    occupied = {
+        parse_vertex(piece.vertex)
+        for player in state.players
+        for piece in [*player.settlements, *player.cities]
+    }
+    possible_settlements = [
+        "|".join(f"{q},{r}" for q, r in vertex)
+        for vertex in board_graph.get_available_settlements(occupied)
+    ]
     best_builds = build_engine.get_best_builds(state.activePlayer, possible_settlements)
     
     recommended_build = best_builds[0] if best_builds else None
@@ -53,13 +61,22 @@ def main():
         recommended_trades = trade_engine.get_recommended_trades(state.activePlayer, recommended_build)
         
     # 4. Output summary
+    fallback = None
+    if not recommended_build:
+        fallback = {
+            "type": "dev_card",
+            "reasoning": "No board placement could be evaluated from the current state.",
+        }
+    elif not recommended_trades and recommended_build.missing:
+        fallback = {
+            "type": "hold",
+            "reasoning": "The recommended build is missing resources and no useful trade was found.",
+        }
+
     output = {
         "recommendedBuild": recommended_build.model_dump() if recommended_build else None,
         "recommendedTrades": [t.model_dump() for t in recommended_trades],
-        "fallback": {
-            "type": "dev_card",
-            "reasoning": "No affordable build or high-likelihood trade this turn; dev card keeps VP progress live."
-        }
+        "fallback": fallback,
     }
     
     print("\n--- Catan Advisor Engine Output ---")

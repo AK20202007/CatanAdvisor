@@ -1,9 +1,9 @@
 from typing import List, Dict, Optional
 from pydantic import BaseModel
-from .models import GameState, Player, ResourceType
+from .models import GameState, Player, ResourceType, PRODUCIBLE_RESOURCES
 from .board import BoardGraph
 from .production_engine import ProductionEngine
-from .build_engine import BuildOption
+from .build_engine import BuildOption, BUILD_COSTS
 
 class TradeOffer(BaseModel):
     give: Dict[ResourceType, int]
@@ -21,24 +21,28 @@ class TradeEngine:
         
     def get_player_income(self, player_id: str) -> Dict[ResourceType, float]:
         incomes = self.production.calculate_expected_income()
-        return incomes.get(player_id, {res: 0.0 for res in ["brick", "lumber", "wool", "grain", "ore"]})
+        return incomes.get(player_id, {res: 0.0 for res in PRODUCIBLE_RESOURCES})
         
-    def evaluate_bank_trades(self, active_player: Player, needed: ResourceType) -> List[TradeOffer]:
+    def evaluate_bank_trades(self, active_player: Player, needed: ResourceType, amount_needed: int = 1) -> List[TradeOffer]:
         """
         Suggests 4:1 bank trades to obtain the needed resource.
         (In a full implementation, it would check for 3:1 and 2:1 port ownership).
         """
         offers = []
+        if needed == "desert" or amount_needed <= 0:
+            return offers
+
         resources = active_player.resources.model_dump()
         for res, amount in resources.items():
             if res != needed and amount >= 4:
+                units = min(amount // 4, amount_needed)
                 offers.append(TradeOffer(
-                    give={res: 4},
-                    receive={needed: 1},
+                    give={res: units * 4},
+                    receive={needed: units},
                     offerTo="bank",
-                    score=2.0,
+                    score=2.0 + units * 0.1,
                     acceptanceLikelihood="high",
-                    reasoning=f"Convert surplus 4 {res} to 1 {needed} via bank."
+                    reasoning=f"Convert {units * 4} {res} to {units} {needed} via the 4:1 bank rate."
                 ))
         return offers
         
@@ -53,10 +57,12 @@ class TradeEngine:
         resources = active_player.resources.model_dump()
         for res, amount in resources.items():
             if res != needed and amount >= 1:
-                active_surplus.append(res)
+                active_surplus.append((amount, res))
                 
-        if not active_surplus:
+        if not active_surplus or needed == "desert":
             return offers
+
+        active_surplus.sort(reverse=True)
             
         for opponent in self.state.players:
             if opponent.id == active_player.id:
@@ -64,15 +70,16 @@ class TradeEngine:
                 
             opp_income = self.get_player_income(opponent.id)
             
-            # If opponent has high expected income of the needed resource
-            if opp_income.get(needed, 0.0) > 2.0:
-                # Offer our biggest surplus
-                offer_res = active_surplus[0]
+            # A player can only trade a resource they currently hold. Production
+            # is still used as a signal that they may be willing to part with it.
+            opponent_stock = opponent.resources.model_dump().get(needed, 0)
+            if opponent_stock >= 1 and opp_income.get(needed, 0.0) > 2.0:
+                offer_res = active_surplus[0][1]
                 offers.append(TradeOffer(
                     give={offer_res: 1},
                     receive={needed: 1},
                     offerTo=opponent.id,
-                    score=3.5,
+                    score=3.5 + min(opponent_stock, 3) * 0.1,
                     acceptanceLikelihood="moderate",
                     reasoning=f"{opponent.id} has high {needed} production; they might trade it for {offer_res}."
                 ))
@@ -88,12 +95,18 @@ class TradeEngine:
         if not player:
             return []
             
-        # In a real engine, we'd calculate exactly what is missing for `best_build`
-        needed_resource = "ore" 
-        
         trades = []
-        trades.extend(self.evaluate_bank_trades(player, needed_resource))
-        trades.extend(self.evaluate_player_trades(player, needed_resource))
+        cost = best_build.cost or BUILD_COSTS.get(best_build.type, {})
+        player_resources = player.resources.model_dump()
+        missing = best_build.missing or {
+            resource: amount - player_resources.get(resource, 0)
+            for resource, amount in cost.items()
+            if player_resources.get(resource, 0) < amount
+        }
+
+        for needed, amount in missing.items():
+            trades.extend(self.evaluate_bank_trades(player, needed, amount))
+            trades.extend(self.evaluate_player_trades(player, needed))
         
         # Rank trades
         trades.sort(key=lambda t: t.score, reverse=True)

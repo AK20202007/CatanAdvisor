@@ -43,6 +43,12 @@ def test_parse_vertex():
     v = parse_vertex("0,0|1,0|0,1")
     assert v == ((0, 0), (0, 1), (1, 0))
 
+def test_parse_vertex_rejects_malformed_values():
+    with pytest.raises(ValueError):
+        parse_vertex("0,0|1,0")
+    with pytest.raises(ValueError):
+        parse_vertex("0,0|0,0|1,0")
+
 def test_calculate_expected_income(sample_state):
     board = BoardGraph(sample_state.board)
     engine = ProductionEngine(sample_state, board)
