@@ -9,7 +9,7 @@ TRADE_RE = re.compile(
     re.IGNORECASE,
 )
 BUILD_RE = re.compile(r"^(?P<player>\S+)\s+builds?\s+(?P<type>\w+)(?:\s+(?P<location>.+))?$", re.IGNORECASE)
-RESOURCE_ALIASES = {"wood": "lumber", "wheat": "grain", "sheep": "wool", "clay": "brick"}
+RESOURCE_ALIASES = {"wood": "lumber", "wheat": "grain", "sheep": "wool"}
 
 
 def help_text() -> str:
@@ -20,7 +20,7 @@ def help_text() -> str:
   build <settlement|city|road|dev_card> [location]
   P2 builds settlement <location>
   trade <player> <amount> <resource> for <amount> <resource> with <player|bank>
-    resource aliases: wood/lumber, wheat/grain, sheep/wool, clay/brick
+    resource aliases: wood/lumber, wheat/grain, sheep/wool, brick
   help
   quit
 """
