@@ -2,6 +2,14 @@ from typing import Dict
 from .models import GameState, ResourceType, PRODUCIBLE_RESOURCES
 from .board import BoardGraph, VertexCoord, PIP_PROBABILITIES
 
+DICE_ROLL_PROBABILITIES = {
+    roll: pips / 36
+    for roll, pips in {
+        2: 1, 3: 2, 4: 3, 5: 4, 6: 5,
+        8: 5, 9: 4, 10: 3, 11: 2, 12: 1,
+    }.items()
+}
+
 def parse_vertex(vertex_str: str) -> VertexCoord:
     """
     Parses a string representation of a vertex into a canonical VertexCoord.
@@ -68,3 +76,25 @@ class ProductionEngine:
                 continue
             yields[tile.resource] += PIP_PROBABILITIES.get(tile.number, 0)
         return yields
+
+    def get_roll_income(self, player_id: str, roll: int) -> Dict[ResourceType, int]:
+        """Return the cards a player receives for one dice roll."""
+        if roll not in DICE_ROLL_PROBABILITIES:
+            return {resource: 0 for resource in PRODUCIBLE_RESOURCES}
+
+        player = next((p for p in self.state.players if p.id == player_id), None)
+        if player is None:
+            return {resource: 0 for resource in PRODUCIBLE_RESOURCES}
+
+        income = {resource: 0 for resource in PRODUCIBLE_RESOURCES}
+        pieces = [(settlement.vertex, 1) for settlement in player.settlements]
+        pieces.extend((city.vertex, 2) for city in player.cities)
+        for vertex_string, multiplier in pieces:
+            vertex = parse_vertex(vertex_string)
+            for tile in self.board.get_tiles_for_vertex(vertex):
+                if tile.number != roll or tile.resource == "desert":
+                    continue
+                if (tile.q, tile.r) == self.board.robber_pos:
+                    continue
+                income[tile.resource] += multiplier
+        return income

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catan Advisor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">Catan Advisor / live state</p>
+        <h1>Make the next move legible.</h1>
+        <p class="lede">Track the board, update a roll, and let the engine explain its best build, trade, and robber placement.</p>
+      </header>
+      <section class="controls" aria-label="Connection and game controls">
+        <label>API token <input id="token" type="password" placeholder="CATAN_API_TOKEN" /></label>
+        <label>Roll <input id="roll" type="number" min="2" max="12" value="6" /></label>
+        <button id="roll-button">Apply roll</button>
+        <button id="refresh-button" class="quiet">Refresh</button>
+      </section>
+      <section class="grid">
+        <article><p class="eyebrow">Recommended build</p><pre id="build">Loading…</pre></article>
+        <article><p class="eyebrow">Recommended trades</p><pre id="trades">Loading…</pre></article>
+        <article><p class="eyebrow">Robber</p><pre id="robber">Loading…</pre></article>
+      </section>
+      <section><p class="eyebrow">Current state</p><pre id="state">Loading…</pre></section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

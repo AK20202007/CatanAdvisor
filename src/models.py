@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Any
+from typing import List, Literal, Dict, Optional, Any
 from pydantic import BaseModel, Field
 
 # Common Types
@@ -51,6 +51,14 @@ class City(BaseModel):
 class Road(BaseModel):
     edge: Any
 
+class TradeEvent(BaseModel):
+    """A completed player-to-player or bank transaction."""
+    turn: int = 0
+    fromPlayer: str
+    toPlayer: str
+    give: Dict[str, int]
+    receive: Dict[str, int]
+
 class Player(BaseModel):
     id: str
     victoryPoints: int
@@ -66,3 +74,5 @@ class GameState(BaseModel):
     board: Board
     players: List[Player]
     activePlayer: str
+    turn: int = 0
+    history: List[TradeEvent] = Field(default_factory=list)

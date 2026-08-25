@@ -10,8 +10,16 @@ from .build_engine import BuildEngine
 from .trade_engine import TradeEngine
 
 def main():
+    if len(sys.argv) < 2 or sys.argv[1] in {"interactive", "--interactive"}:
+        from .interactive import run_interactive
+        from .session import GameSession
+
+        state_path = sys.argv[2] if len(sys.argv) > 2 else "sample_state.json"
+        run_interactive(GameSession.from_file(state_path))
+        return
+
     if len(sys.argv) < 2:
-        print("Usage: python -m src.cli <game_state.json>")
+        print("Usage: python -m src.cli <game_state.json> | --interactive [game_state.json]")
         sys.exit(1)
         
     state_file = Path(sys.argv[1])

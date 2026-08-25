@@ -4,6 +4,7 @@ from .models import GameState, Player, ResourceType, PRODUCIBLE_RESOURCES
 from .board import BoardGraph
 from .production_engine import ProductionEngine
 from .build_engine import BuildOption, BUILD_COSTS
+from .hand_tracker import HandTracker
 
 class TradeOffer(BaseModel):
     give: Dict[ResourceType, int]
@@ -18,6 +19,7 @@ class TradeEngine:
         self.state = game_state
         self.board = board_graph
         self.production = production_engine
+        self.hands = HandTracker(game_state)
         
     def get_player_income(self, player_id: str) -> Dict[ResourceType, float]:
         incomes = self.production.calculate_expected_income()
@@ -81,7 +83,10 @@ class TradeEngine:
                     offerTo=opponent.id,
                     score=3.5 + min(opponent_stock, 3) * 0.1,
                     acceptanceLikelihood="moderate",
-                    reasoning=f"{opponent.id} has high {needed} production; they might trade it for {offer_res}."
+                    reasoning=(
+                        f"{opponent.id} has high {needed} production and it is in their hand; "
+                        f"they might trade it for {offer_res}. {self.hands.context_for_trade(opponent.id, needed)}"
+                    )
                 ))
                 
         return offers

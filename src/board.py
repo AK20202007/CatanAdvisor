@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Set
+from typing import Any, List, Tuple, Dict, Set
 from .models import Board as BoardModel, Tile
 
 HexCoord = Tuple[int, int]
@@ -101,3 +101,32 @@ class BoardGraph:
                 continue
             available.append(vertex)
         return available
+
+    def get_ports_for_vertex(self, vertex: VertexCoord) -> List[Any]:
+        """Return ports whose edge reference touches a vertex.
+
+        A port may be encoded as a full vertex or as the two adjacent hexes on
+        the board edge, so both representations are accepted.
+        """
+        vertex_set = set(vertex)
+        matches = []
+        for port in self.model.ports:
+            edge = port.edge
+            if isinstance(edge, str):
+                try:
+                    edge_set = {
+                        tuple(int(value) for value in part.split(","))
+                        for part in edge.split("|")
+                    }
+                except (TypeError, ValueError):
+                    continue
+            elif isinstance(edge, (list, tuple)):
+                try:
+                    edge_set = {tuple(int(value) for value in item) for item in edge}
+                except (TypeError, ValueError):
+                    continue
+            else:
+                continue
+            if edge_set and edge_set.issubset(vertex_set):
+                matches.append(port)
+        return matches

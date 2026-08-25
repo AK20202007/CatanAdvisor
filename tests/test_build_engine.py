@@ -1,5 +1,5 @@
 import pytest
-from src.models import GameState, Board, Tile, Coordinate, Player, Resources, DevCards, UnrevealedDevCards, Settlement
+from src.models import GameState, Board, Tile, Coordinate, Player, Resources, DevCards, UnrevealedDevCards, Settlement, Port
 from src.board import BoardGraph
 from src.production_engine import ProductionEngine
 from src.build_engine import BuildEngine
@@ -79,3 +79,14 @@ def test_affordable_city_ranks_above_road(base_state):
     options = engine.get_affordable_builds("P1")
 
     assert [option.type for option in options] == ["city", "road"]
+
+def test_port_synergy_increases_settlement_score(base_state):
+    base_state.board.ports = [Port(edge="0,0|1,0|0,1", type="2:1_ore")]
+    board = BoardGraph(base_state.board)
+    prod = ProductionEngine(base_state, board)
+    engine = BuildEngine(base_state, board, prod)
+
+    option = engine.evaluate_settlement(base_state.players[0], "0,0|1,0|0,1")
+
+    assert option.score > 13.0
+    assert "2:1 ore port synergy" in option.reasoning

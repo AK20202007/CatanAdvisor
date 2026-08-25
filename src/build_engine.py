@@ -1,7 +1,7 @@
 from typing import List, Dict
 from pydantic import BaseModel, Field
 from .models import GameState, Player, ResourceType
-from .board import BoardGraph
+from .board import BoardGraph, VertexCoord
 from .production_engine import ProductionEngine, parse_vertex
 
 class BuildOption(BaseModel):
@@ -43,10 +43,11 @@ class BuildEngine:
         # In a full implementation, we'd compare this to their existing income.
         
         reasoning = f"Adds {total_pips} expected pips per turn."
-        
-        # Check for port access (simplified for v1)
-        # Port checking requires finding if this vertex matches a port's edge.
-        # We can add that logic later.
+
+        port_bonus, port_reasoning = self._port_synergy(player, vertex, pips)
+        score += port_bonus
+        if port_reasoning:
+            reasoning += " " + port_reasoning
         
         cost = BUILD_COSTS["settlement"]
         missing = self.get_missing_resources(player, cost)
@@ -63,6 +64,27 @@ class BuildEngine:
             cost=cost,
             missing=missing,
         )
+
+    def _port_synergy(self, player: Player, vertex: VertexCoord, pips: Dict[ResourceType, int]) -> tuple[float, str]:
+        ports = self.board.get_ports_for_vertex(vertex)
+        if not ports:
+            return 0.0, ""
+
+        income = self.production.calculate_expected_income().get(player.id, {})
+        details = []
+        bonus = 0.0
+        for port in ports:
+            if port.type == "3:1_generic":
+                port_bonus = self.w3
+                details.append("generic 3:1 port access")
+            else:
+                resource = port.type.removeprefix("2:1_")
+                existing = income.get(resource, 0.0)
+                local = pips.get(resource, 0)
+                port_bonus = self.w3 * (1.0 + existing / 5.0 + local / 5.0)
+                details.append(f"2:1 {resource} port synergy")
+            bonus += port_bonus
+        return bonus, "Also gains " + " and ".join(details) + "."
 
     @staticmethod
     def get_missing_resources(player: Player, cost: Dict[ResourceType, int]) -> Dict[ResourceType, int]:
