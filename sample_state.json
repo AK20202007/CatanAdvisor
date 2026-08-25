@@ -1,0 +1,45 @@
+{
+  "board": {
+    "tiles": [
+      { "q": 0, "r": 0, "resource": "ore", "number": 10 },
+      { "q": 1, "r": 0, "resource": "brick", "number": 8 },
+      { "q": 0, "r": 1, "resource": "lumber", "number": 6 },
+      { "q": 1, "r": 1, "resource": "grain", "number": 4 },
+      { "q": 2, "r": 0, "resource": "desert" },
+      { "q": -1, "r": 0, "resource": "wool", "number": 9 }
+    ],
+    "ports": [{ "edge": "0,-1|1,-1", "type": "2:1_ore" }],
+    "robber": { "q": 2, "r": 0 }
+  },
+  "players": [
+    {
+      "id": "P1",
+      "victoryPoints": 5,
+      "resources": { "brick": 5, "lumber": 1, "wool": 0, "grain": 3, "ore": 1 },
+      "devCards": {
+        "unrevealed": { "count": 2 },
+        "revealed": ["knight", "year_of_plenty"]
+      },
+      "settlements": [{ "vertex": "0,0|1,0|0,1" }],
+      "cities": [],
+      "roads": [],
+      "longestRoad": false,
+      "largestArmy": true
+    },
+    {
+      "id": "P2",
+      "victoryPoints": 2,
+      "resources": { "brick": 0, "lumber": 4, "wool": 1, "grain": 0, "ore": 0 },
+      "devCards": {
+        "unrevealed": { "count": 0 },
+        "revealed": []
+      },
+      "settlements": [{ "vertex": "1,0|2,0|1,1" }],
+      "cities": [],
+      "roads": [],
+      "longestRoad": false,
+      "largestArmy": false
+    }
+  ],
+  "activePlayer": "P1"
+}
