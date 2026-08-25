@@ -6,7 +6,7 @@ from .board import BoardGraph
 from .build_engine import BUILD_COSTS, BuildEngine, BuildOption
 from .hand_tracker import HandTracker
 from .lookahead_engine import LookaheadEngine
-from .models import City, GameState, Resources, Road, Settlement, TradeEvent
+from .models import City, GameState, PRODUCIBLE_RESOURCES, Resources, Road, Settlement, TradeEvent
 from .production_engine import ProductionEngine, parse_vertex
 from .robber_engine import RobberEngine
 from .trade_engine import TradeEngine, TradeOffer
@@ -90,6 +90,7 @@ class GameSession:
         recipient = None if to_player == "bank" else self._player(to_player)
         if to_player == "bank" and sum(give.values()) != 4 * sum(receive.values()):
             raise ValueError("Bank trades must use the 4:1 ratio until port ownership is modeled.")
+        self._validate_resource_names(receive)
         self._validate_resources(giver.resources, give)
         if recipient:
             self._validate_resources(recipient.resources, receive)
@@ -128,7 +129,14 @@ class GameSession:
         return player
 
     @staticmethod
+    def _validate_resource_names(amounts: Dict[str, int]) -> None:
+        unknown = set(amounts) - set(PRODUCIBLE_RESOURCES)
+        if unknown:
+            raise ValueError(f"Unknown resource(s): {', '.join(sorted(unknown))}")
+
+    @staticmethod
     def _validate_resources(resources: Resources, amounts: Dict[str, int]) -> None:
+        GameSession._validate_resource_names(amounts)
         if any(amount <= 0 for amount in amounts.values()):
             raise ValueError("Resource amounts must be positive.")
         current = resources.model_dump()

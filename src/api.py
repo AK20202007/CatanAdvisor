@@ -14,7 +14,10 @@ except ModuleNotFoundError as exc:  # pragma: no cover - exercised by deployment
 
 
 def create_app(state_path: str | Path = "sample_state.json") -> FastAPI:
-    session = GameSession.from_file(state_path)
+    resolved_state_path = Path(state_path)
+    if not resolved_state_path.is_absolute() and not resolved_state_path.exists():
+        resolved_state_path = Path(__file__).resolve().parent.parent / resolved_state_path
+    session = GameSession.from_file(resolved_state_path)
     api_token = os.getenv("CATAN_API_TOKEN")
     app = FastAPI(title="Catan Advisor API", version="1.0")
     app.add_middleware(

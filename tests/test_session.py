@@ -1,3 +1,5 @@
+import pytest
+
 from src.session import GameSession
 from src.interactive import execute_command
 
@@ -39,6 +41,18 @@ def test_bank_trade_rejects_invalid_ratio():
         assert "4:1" in str(exc)
     else:
         raise AssertionError("Expected invalid bank ratio to be rejected")
+    assert player.resources.model_dump() == before
+
+
+def test_trade_rejects_unknown_resource_without_mutating_state():
+    session = GameSession.from_file("sample_state.json")
+    player = session.state.players[0]
+    player.resources.lumber = 4
+    before = player.resources.model_dump()
+
+    with pytest.raises(ValueError, match="Unknown resource"):
+        session.trade("P1", "bank", {"lumber": 4}, {"not_a_resource": 1})
+
     assert player.resources.model_dump() == before
 
 
