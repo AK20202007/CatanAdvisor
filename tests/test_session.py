@@ -56,6 +56,16 @@ def test_trade_rejects_unknown_resource_without_mutating_state():
     assert player.resources.model_dump() == before
 
 
+def test_update_tile_changes_resource_and_clears_desert_number():
+    session = GameSession.from_file("sample_state.json")
+
+    session.update_tile(0, 0, "desert", 6)
+
+    tile = next(tile for tile in session.state.board.tiles if (tile.q, tile.r) == (0, 0))
+    assert tile.resource == "desert"
+    assert tile.number is None
+
+
 def test_recommendations_include_robber_and_lookahead():
     session = GameSession.from_file("sample_state.json")
 

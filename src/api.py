@@ -57,6 +57,20 @@ def create_app(state_path: str | Path = "sample_state.json") -> FastAPI:
         except (KeyError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.post("/api/board/tile", dependencies=[Depends(require_token)])
+    def update_tile(payload: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            number = payload.get("number")
+            session.update_tile(
+                int(payload["q"]),
+                int(payload["r"]),
+                payload["resource"],
+                None if number in (None, "") else int(number),
+            )
+            return {"state": session.state.model_dump(), "recommendations": session.recommendations()}
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.post("/api/trade", dependencies=[Depends(require_token)])
     def apply_trade(payload: Dict[str, Any]) -> Dict[str, Any]:
         try:

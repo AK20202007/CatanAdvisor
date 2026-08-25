@@ -7,6 +7,7 @@ from .build_engine import BUILD_COSTS, BuildEngine, BuildOption
 from .hand_tracker import HandTracker
 from .lookahead_engine import LookaheadEngine
 from .models import City, GameState, PRODUCIBLE_RESOURCES, Resources, Road, Settlement, TradeEvent
+from .models import ResourceType
 from .production_engine import ProductionEngine, parse_vertex
 from .robber_engine import RobberEngine
 from .trade_engine import TradeEngine, TradeOffer
@@ -47,6 +48,20 @@ class GameSession:
         self.state.board.robber.q = q
         self.state.board.robber.r = r
         self.board.robber_pos = (q, r)
+
+    def update_tile(self, q: int, r: int, resource: ResourceType, number: int | None = None) -> None:
+        """Update a tile from the visual board editor."""
+        tile = next((tile for tile in self.state.board.tiles if tile.q == q and tile.r == r), None)
+        if tile is None:
+            raise ValueError("That tile does not exist on the board.")
+        if resource not in (*PRODUCIBLE_RESOURCES, "desert"):
+            raise ValueError(f"Unknown tile resource: {resource}")
+        if number is not None and number not in range(2, 13):
+            raise ValueError("Tile numbers must be between 2 and 12.")
+        if resource == "desert":
+            number = None
+        tile.resource = resource
+        tile.number = number
 
     def build(self, player_id: str, build_type: str, location: str = "") -> BuildOption:
         player = self._player(player_id)

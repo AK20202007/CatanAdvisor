@@ -42,8 +42,12 @@ header and the browser keeps the token in memory only.
 CATAN_API_TOKEN=choose-a-local-token uvicorn src.api:app --reload
 ```
 
-Open `http://127.0.0.1:8000` and enter the same token. The API supports state,
-recommendations, rolls, robber placement, trades, and builds.
+Open `http://127.0.0.1:8000` and enter the same token. The board workspace lets
+you click a tile to change its resource or number, move the robber to the
+selected tile, click a board point to place a settlement or upgrade a city,
+apply dice rolls, and inspect the updated recommendations. The API supports
+the same state, recommendations, rolls, robber placement, trades, builds, and
+tile editing actions.
 
 ### Optional board-photo ingestion
 

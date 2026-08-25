@@ -3,28 +3,79 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Catan Advisor</title>
+    <meta name="theme-color" content="#0b0f14" />
+    <title>Catan Advisor Board</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <header>
-        <p class="eyebrow">Catan Advisor / live state</p>
-        <h1>Make the next move legible.</h1>
-        <p class="lede">Track the board, update a roll, and let the engine explain its best build, trade, and robber placement.</p>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div><p class="eyebrow">Catan Advisor</p><p class="brand-subtitle">Live board workspace</p></div>
+        </div>
+        <div class="connection-controls">
+          <label class="token-label" for="token">API token</label>
+          <input id="token" type="password" placeholder="local token" autocomplete="off" />
+          <button id="connect-button" class="button button-primary">Connect</button>
+          <span id="connection-status" class="status-dot status-idle">Offline</span>
+        </div>
       </header>
-      <section class="controls" aria-label="Connection and game controls">
-        <label>API token <input id="token" type="password" placeholder="CATAN_API_TOKEN" /></label>
-        <label>Roll <input id="roll" type="number" min="2" max="12" value="6" /></label>
-        <button id="roll-button">Apply roll</button>
-        <button id="refresh-button" class="quiet">Refresh</button>
+
+      <section class="intro-row">
+        <div>
+          <p class="eyebrow">Click to update the table</p>
+          <h1>See the board.<br /><em>Play the position.</em></h1>
+          <p class="lede">Select a tile to edit its resource, number, or robber. Switch to a building mode, then click an open point on the board to record the move.</p>
+        </div>
+        <div class="turn-card">
+          <p class="eyebrow">Active player</p>
+          <select id="active-player" aria-label="Active player"></select>
+          <div id="player-summary" class="player-summary"></div>
+        </div>
       </section>
-      <section class="grid">
-        <article><p class="eyebrow">Recommended build</p><pre id="build">Loading…</pre></article>
-        <article><p class="eyebrow">Recommended trades</p><pre id="trades">Loading…</pre></article>
-        <article><p class="eyebrow">Robber</p><pre id="robber">Loading…</pre></article>
+
+      <section class="workspace" aria-label="Interactive board workspace">
+        <div class="board-panel panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Board map</p><h2 id="board-heading">Connect to load your board</h2></div>
+            <div class="board-actions">
+              <label for="board-mode">Mode</label>
+              <select id="board-mode"><option value="tile">Edit tile</option><option value="settlement">Place settlement</option><option value="city">Upgrade to city</option></select>
+              <button id="refresh-button" class="button button-quiet">Sync</button>
+            </div>
+          </div>
+          <div class="mode-hint" id="mode-hint">Click any hex to edit its resource or number.</div>
+          <div class="board-scroll"><div id="board-canvas" class="board-canvas" aria-label="Catan board"></div></div>
+          <div class="board-legend">
+            <span><i class="legend-swatch resource-brick"></i>brick</span><span><i class="legend-swatch resource-lumber"></i>lumber</span><span><i class="legend-swatch resource-wool"></i>wool</span><span><i class="legend-swatch resource-grain"></i>grain</span><span><i class="legend-swatch resource-ore"></i>ore</span><span><i class="legend-swatch resource-desert"></i>desert</span>
+          </div>
+        </div>
+
+        <aside class="side-column">
+          <section class="panel inspector-panel">
+            <div class="panel-heading compact-heading"><div><p class="eyebrow">Inspector</p><h2 id="inspector-title">Nothing selected</h2></div><span id="selection-badge" class="selection-badge">—</span></div>
+            <div id="tile-editor" class="editor-form" hidden>
+              <label>Resource<select id="resource-editor"><option value="brick">brick</option><option value="lumber">lumber</option><option value="wool">wool</option><option value="grain">grain</option><option value="ore">ore</option><option value="desert">desert</option></select></label>
+              <label>Number token<input id="number-editor" type="number" min="2" max="12" placeholder="none" /></label>
+              <div class="form-actions"><button id="save-tile-button" class="button button-primary">Save tile</button><button id="robber-button" class="button button-quiet">Move robber here</button></div>
+              <p class="field-note">Desert tiles automatically clear their number token.</p>
+            </div>
+            <div id="building-editor" class="building-editor" hidden><p>Click an open point on the board to place a <strong id="building-type-label">settlement</strong> for the active player.</p><button id="cancel-building-button" class="button button-quiet">Back to tile editing</button></div>
+            <p id="inspector-empty" class="empty-state">Select a hex or choose a building mode to begin.</p>
+          </section>
+          <section class="panel turn-panel"><div class="panel-heading compact-heading"><div><p class="eyebrow">Turn tools</p><h2>Update the game</h2></div></div><div class="roll-row"><label for="roll">Dice roll</label><input id="roll" type="number" min="2" max="12" value="8" /><button id="roll-button" class="button button-primary">Apply roll</button></div><p class="field-note">Rolls update every player’s hand and recalculate the advice.</p></section>
+        </aside>
       </section>
-      <section><p class="eyebrow">Current state</p><pre id="state">Loading…</pre></section>
+
+      <section class="recommendation-grid" aria-label="Advisor recommendations">
+        <article class="panel recommendation-card recommendation-featured"><div class="card-topline"><p class="eyebrow">Best next build</p><span class="card-icon">↗</span></div><div id="build" class="recommendation-content empty-state">Connect to see a recommendation.</div></article>
+        <article class="panel recommendation-card"><div class="card-topline"><p class="eyebrow">Trade ideas</p><span class="card-icon">⇄</span></div><div id="trades" class="recommendation-content empty-state">—</div></article>
+        <article class="panel recommendation-card"><div class="card-topline"><p class="eyebrow">Robber target</p><span class="card-icon">◉</span></div><div id="robber" class="recommendation-content empty-state">—</div></article>
+      </section>
+
+      <details class="raw-state panel"><summary>View raw game state</summary><pre id="state">Connect to load state.</pre></details>
+      <p id="activity" class="activity" role="status">Ready when you are.</p>
     </main>
     <script src="/app.js" type="module"></script>
   </body>
